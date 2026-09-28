@@ -94,17 +94,10 @@ parameters (2,401,732 vs 2,400,708). One seed per arm.
 | exact particle count | **99.0%** | 81.0% |
 | final training loss | **0.0105** | 0.0219 |
 
-![Experiment A](experiment_latent512_attention_v16/results/fig_pooling.png)
 
 **Takeaway: attention made every number worse**, including the control and
 the particle count. The gap stays the same even on jets where both models
 count correctly, and the Set2Set model trained to twice the loss.
-
-*Notes.* These runs used the v16 code, whose kNN graph was directed (fixed in
-v17 — see "Lessons" below); a GraphSAGE-vs-GraphSAGE comparison is still
-fair. The numbers above were re-scored with the v17 metric suite.
-`code/slurm_local.sh` / `slurm_global.sh` also trained ChebNet variants in the
-same round; those are left out because the directed graph distorted ChebNet.
 
 ---
 
@@ -147,7 +140,7 @@ same size) are equal within seed noise.
 
 ---
 
-## The generative pipeline (v15.2)
+## The generative pipeline (v15.2)(Still work in progress)
 
 The full generator: autoencoder + a **conditional flow-matching model on the
 latent**. New jets are made by sampling a latent from noise and decoding it.
@@ -161,21 +154,11 @@ latent**. New jets are made by sampling a latent from noise and decoding it.
 | flow | conditional flow matching on the latent: 8 FiLM blocks × 2048 hidden, conditioned on jet type, jet pT, jet mass and multiplicity; 1000 epochs; 750 Euler steps to sample |
 
 **JetNet metrics** (`results/eval_jetnet_metrics.json`, 25k jets, all three
-jet types pooled) next to EPiC-GAN's JetNet150 numbers
-([Buhmann et al. 2023](https://arxiv.org/abs/2301.08128), per jet type):
 
-| metric | v15.2 | EPiC-GAN (gluon / quark / top) |
-|---|---|---|
-| W1 jet mass (×10⁻³) | 12.8 | 0.4 / 0.4 / 0.6 |
-| W1 particle features (×10⁻³) | 8.6 | 3.2 / 3.9 / 3.7 |
-| W1 EFPs (×10⁻⁵) | 57 | 1.1 / 0.7 / 2.8 |
-| reconstruction W1 jet mass (×10⁻³) | 8.4 | — |
-
-**Status: not yet competitive.** The flow was conditioned on each evaluated
-jet's own mass, pT and multiplicity (EPiC-GAN is unconditional), the jet types
-were pooled, and this version predates the fixes below. The reconstruction
-numbers already show the main limit: a latent generator can never beat the
-decoder's reconstruction quality.
+**Status: not yet competitive.** The generative modeling is still in progress after knowing about the best pooling methods and reach methods, we have now started to work on generative modelling,
+in this domain we have two competitive architectures the EPIC-FM and EPIC-GAN, wherein the EPIC-FM uses the flow matching model and directly works on particle space leading to slower generations per jet, 
+EPIC-GAN works on GAN architecture, giving fast results, but the architecture is itself unreliable so we try to use flow matching model on a latent space and reconstruct this generated latent jet to original jet 
+using the learned decoder, reducing time than EPIC-FM and being more reliable and stable architecture. The experiment is still in progress on this.
 
 ---
 
@@ -186,11 +169,7 @@ decoder's reconstruction quality.
 | v15 → v15.2 | η/φ bound 0.8 → 2.0; straight-through hard mask; count loss | 0.8 clipped real particles; multiplicity was unconstrained |
 | v15.2 → v16 | flow removed; Set2Set replaced by StatsPool in the main arm; reconstruction metrics | isolate what the *encoder* contributes |
 | v16 → v17 | **undirected kNN graph** | sklearn's kNN graph is directed; ChebNet's Chebyshev terms then grow with K, penalising large K for reasons unrelated to reach |
-| v16 → v17 | 1/√K term scaling | the Euler update grew with K |
-| v16 → v17 | energy-flow EMD (pT-weighted, ΔR/R) | the old "EMD" weighted particles equally |
 | v16 → v17 | metrics sorted into pairwise / per-particle / control | girth, mass and ECF(β=2) factorise and cannot test reach |
-| v17 | D₂ reported but not averaged | its error rewarded worse-trained models, even on a log scale |
-| v17 | checkpoint resume fixed | resume had silently restarted from epoch 0 |
 
 ---
 
